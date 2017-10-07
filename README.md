@@ -39,6 +39,18 @@ cat >Directory.Build.props <<'EOF'
 EOF
 ```
 
+Configure nuget to use our local directory as a package source:
+
+```bash
+cat >NuGet.Config <<'EOF'
+<configuration>
+  <packageSources>
+    <add key="ExampleLibrary" value="ExampleLibrary" />
+  </packageSources>
+</configuration>
+EOF
+```
+
 Create a new library project:
 
 ```bash
@@ -77,7 +89,7 @@ EOF
 cd ..
 ```
 
-Create a console application that references the created package:
+Create a console application that references the `ExampleLibrary` package:
 
 ```bash
 mkdir ExampleApplication
@@ -160,7 +172,6 @@ Build the example application that uses the nuget:
 
 ```bash
 cd ../ExampleApplication
-dotnet restore --source ../ExampleLibrary
 dotnet build -v:n -c:Release -p:ci=true
 dotnet sourcelink print-urls bin/Release/netcoreapp2.0/ExampleApplication.dll
 dotnet sourcelink print-json bin/Release/netcoreapp2.0/ExampleApplication.dll | cat | jq .
