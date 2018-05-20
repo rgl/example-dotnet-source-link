@@ -32,9 +32,16 @@ Configure msbuild to always use SourceLink:
 cat >Directory.Build.props <<'EOF'
 <Project>
   <ItemGroup>
-    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.4.0" PrivateAssets="All" />
-    <DotNetCliToolReference Include="dotnet-sourcelink" Version="2.4.0" />
+    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.1" PrivateAssets="All" />
+    <DotNetCliToolReference Include="dotnet-sourcelink" Version="2.8.1" />
   </ItemGroup>
+  <PropertyGroup>
+    <!--
+      you can also specify this property on the command line. e.g.:
+        dotnet build ... -p:SourceLinkServerType=GitLab
+    -->
+    <!--<SourceLinkServerType>GitLab</SourceLinkServerType>-->
+  </PropertyGroup>
 </Project>
 EOF
 ```
@@ -149,7 +156,7 @@ Build the library and its nuget:
 
 ```bash
 cd ExampleLibrary
-dotnet build -v:n -c:Release -p:ci=true
+dotnet build -v:n -c:Release -p:ci=true #-p:SourceLinkServerType=GitLab
 dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.1 --output .
 #dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.1 --include-symbols --output .
 ## move the .symbols.nupkg to .nupkg for always have a nupkg with .pdb
@@ -172,7 +179,7 @@ Build the example application that uses the nuget:
 
 ```bash
 cd ../ExampleApplication
-dotnet build -v:n -c:Release -p:ci=true
+dotnet build -v:n -c:Release -p:ci=true #-p:SourceLinkServerType=GitLab
 dotnet sourcelink print-urls bin/Release/netcoreapp2.0/ExampleApplication.dll
 dotnet sourcelink print-json bin/Release/netcoreapp2.0/ExampleApplication.dll | cat | jq .
 dotnet sourcelink print-documents bin/Release/netcoreapp2.0/ExampleApplication.dll
