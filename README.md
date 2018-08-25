@@ -6,6 +6,7 @@ This in an example nuget library and application that uses [source link](https:/
 * To be able to step into a nuget package source code you need to configure Visual Studio as:
   * Select `Tools` | `Options` | `Debugging` | `General`
   * Uncheck `Enable Just my Code`
+* To be able to access a private GitLab server that requires authentication you need to [configure the GitLab server and Visual Studio](https://github.com/rgl/gitlab-source-link-proxy).
 
 
 # Caveats
@@ -24,6 +25,7 @@ This in an example nuget library and application that uses [source link](https:/
 * [dotnet pack](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-pack?tabs=netcore2x)
 * [dotnet sourcelink](https://github.com/dotnet/sourcelink)
 * [ctaggart/SourceLink](https://github.com/ctaggart/SourceLink)
+
 
 # Example
 
@@ -96,7 +98,7 @@ Create a console application that references the `ExampleLibrary` package:
 mkdir ExampleApplication
 cd ExampleApplication
 dotnet new console
-dotnet add package ExampleLibrary --version 0.0.1 --no-restore
+dotnet add package ExampleLibrary --version 0.0.2 --no-restore
 cat >Program.cs <<'EOF'
 using System;
 using ExampleLibrary;
@@ -123,7 +125,7 @@ cat >ExampleApplication.csproj <<'EOF'
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ExampleLibrary" Version="0.0.1" />
+    <PackageReference Include="ExampleLibrary" Version="0.0.2" />
   </ItemGroup>
 </Project>
 EOF
@@ -151,7 +153,7 @@ Build the library and its nuget:
 ```bash
 cd ExampleLibrary
 dotnet build -v:n -c:Release
-dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.1 --output .
+dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.2 --output .
 ```
 
 Verify that the source links within the files inside the `.nupkg` work:
@@ -159,11 +161,11 @@ Verify that the source links within the files inside the `.nupkg` work:
 ```bash
 dotnet tool install --global sourcelink
 choco install -y jq
-sourcelink test ExampleLibrary.0.0.1.nupkg
-rm -rf ExampleLibrary.0.0.1.nupkg.tmp && 7z x -oExampleLibrary.0.0.1.nupkg.tmp ExampleLibrary.0.0.1.nupkg
-sourcelink print-urls ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
-sourcelink print-json ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
-sourcelink print-documents ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+sourcelink test ExampleLibrary.0.0.2.nupkg
+rm -rf ExampleLibrary.0.0.2.nupkg.tmp && 7z x -oExampleLibrary.0.0.2.nupkg.tmp ExampleLibrary.0.0.2.nupkg
+sourcelink print-urls ExampleLibrary.0.0.2.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+sourcelink print-json ExampleLibrary.0.0.2.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
+sourcelink print-documents ExampleLibrary.0.0.2.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
 ```
 
 Build the example application that uses the nuget:

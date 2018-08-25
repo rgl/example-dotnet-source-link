@@ -13,7 +13,10 @@ namespace ExampleLibrary
             {
                 throw new ArgumentNullException(nameof(name));
             }
-            return $"Hello {name}!";
+
+            // we use another class to test whether the Visual Studio
+            // SourceLink authentication works across different files.
+            return GreetGenerator.Greet(name);
         }
     }
 }
