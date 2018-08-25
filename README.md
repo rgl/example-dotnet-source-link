@@ -22,6 +22,7 @@ This in an example nuget library and application that uses [source link](https:/
 
 * [Customize your build](https://docs.microsoft.com/en-us/visualstudio/msbuild/customize-your-build)
 * [dotnet pack](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-pack?tabs=netcore2x)
+* [dotnet sourcelink](https://github.com/dotnet/sourcelink)
 * [ctaggart/SourceLink](https://github.com/ctaggart/SourceLink)
 
 # Example
@@ -32,16 +33,9 @@ Configure msbuild to always use SourceLink:
 cat >Directory.Build.props <<'EOF'
 <Project>
   <ItemGroup>
-    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.1" PrivateAssets="All" />
-    <DotNetCliToolReference Include="dotnet-sourcelink" Version="2.8.1" />
+    <!-- NB for GitLab you need to switch the PackageReference to Microsoft.SourceLink.GitLab. -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All" />
   </ItemGroup>
-  <PropertyGroup>
-    <!--
-      you can also specify this property on the command line. e.g.:
-        dotnet build ... -p:SourceLinkServerType=GitLab
-    -->
-    <!--<SourceLinkServerType>GitLab</SourceLinkServerType>-->
-  </PropertyGroup>
 </Project>
 EOF
 ```
@@ -125,7 +119,7 @@ cat >ExampleApplication.csproj <<'EOF'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
@@ -156,34 +150,31 @@ Build the library and its nuget:
 
 ```bash
 cd ExampleLibrary
-dotnet build -v:n -c:Release -p:ci=true #-p:SourceLinkServerType=GitLab
+dotnet build -v:n -c:Release
 dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.1 --output .
-#dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.1 --include-symbols --output .
-## move the .symbols.nupkg to .nupkg for always have a nupkg with .pdb
-#for f in *.symbols.nupkg; do mv $f $(echo $f | sed 's,\.symbols\.,.,g'); done
 ```
-
-**NB** you can also add `<IncludeSymbols>True</IncludeSymbols>` to the `.csproj` to always create the `.symbols.nupkg` package without using the `--include-symbols` command line argument.
 
 Verify that the source links within the files inside the `.nupkg` work:
 
 ```bash
-dotnet sourcelink test ExampleLibrary.0.0.1.nupkg
+dotnet tool install --global sourcelink
+choco install -y jq
+sourcelink test ExampleLibrary.0.0.1.nupkg
 rm -rf ExampleLibrary.0.0.1.nupkg.tmp && 7z x -oExampleLibrary.0.0.1.nupkg.tmp ExampleLibrary.0.0.1.nupkg
-dotnet sourcelink print-urls ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
-dotnet sourcelink print-json ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
-dotnet sourcelink print-documents ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+sourcelink print-urls ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+sourcelink print-json ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
+sourcelink print-documents ExampleLibrary.0.0.1.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
 ```
 
 Build the example application that uses the nuget:
 
 ```bash
 cd ../ExampleApplication
-dotnet build -v:n -c:Release -p:ci=true #-p:SourceLinkServerType=GitLab
-dotnet sourcelink print-urls bin/Release/netcoreapp2.0/ExampleApplication.dll
-dotnet sourcelink print-json bin/Release/netcoreapp2.0/ExampleApplication.dll | cat | jq .
-dotnet sourcelink print-documents bin/Release/netcoreapp2.0/ExampleApplication.dll
-dotnet run
+dotnet build -v:n -c:Release
+sourcelink print-urls bin/Release/netcoreapp2.1/ExampleApplication.dll
+sourcelink print-json bin/Release/netcoreapp2.1/ExampleApplication.dll | cat | jq .
+sourcelink print-documents bin/Release/netcoreapp2.1/ExampleApplication.dll
+dotnet run -v:n -c=Release --no-build
 ```
 
 You should see file name and line numbers in all the stack trace lines. e.g.:
@@ -191,6 +182,6 @@ You should see file name and line numbers in all the stack trace lines. e.g.:
 ```
 Unhandled Exception: System.ArgumentNullException: Value cannot be null.
 Parameter name: name
-   at ExampleLibrary.Greeter.Greet(String name) in C:\Users\vagrant\Desktop\example-dotnet-source-link\ExampleLibrary\Greeter.cs:line 11
-   at ExampleApplication.Program.Main(String[] args) in C:\Users\vagrant\Desktop\example-dotnet-source-link\ExampleApplication\Program.cs:line 11
+   at ExampleLibrary.Greeter.Greet(String name) in C:\vagrant\Projects\example-dotnet-source-link\ExampleLibrary\Greeter.cs:line 14
+   at ExampleApplication.Program.Main(String[] args) in C:\vagrant\Projects\example-dotnet-source-link\ExampleApplication\Program.cs:line 10
 ```
