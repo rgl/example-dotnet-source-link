@@ -1,0 +1,73 @@
+stages:
+  - build
+  - test
+
+before_script:
+  #
+  # enable strict mode and fail the job when there is an unhandled exception.
+  - |
+    Set-StrictMode -Version Latest
+    $FormatEnumerationLimit = -1
+    $ErrorActionPreference = 'Stop'
+    $ProgressPreference = 'SilentlyContinue'
+    trap {
+      Write-Output "ERROR: $_"
+      Write-Output (($_.ScriptStackTrace -split '\r?\n') -replace '^(.*)$','ERROR: $1')
+      Write-Output (($_.Exception.ToString() -split '\r?\n') -replace '^(.*)$','ERROR EXCEPTION: $1')
+      Exit 1
+    }
+  #
+  # show the entire job script (GitLab concatenates all the before_script lines
+  # and all the job script lines into a single file and executes it with
+  # PowerShell).
+  - |
+    Write-Output "$PSCommandPath content:"
+    Get-Content $PSCommandPath
+  #
+  # show all the environment variables.
+  - |
+    Get-ChildItem env: `
+      | Format-Table -AutoSize `
+      | Out-String -Width 4096 -Stream `
+      | ForEach-Object {$_.Trim()}
+  #
+  # define helper functions.
+  - |
+      function exec([ScriptBlock]$externalCommand) {
+        &$externalCommand
+        if ($LASTEXITCODE) {
+          throw "$externalCommand failed with exit code $LASTEXITCODE"
+        }
+      }
+
+build_job:
+  stage: build
+  tags:
+    - vs2017
+  script:
+    - 'cd ExampleLibrary'
+    - 'exec {dotnet build -v n -c Release}'
+    - 'exec {dotnet pack -v n -c Release --no-build -p:PackageVersion=0.0.2 --output .}'
+    - 'cd ../ExampleApplication'
+    - 'exec {dotnet build -v n -c Release}'
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - 'ExampleLibrary/ExampleLibrary.*.nupkg'
+      - 'ExampleApplication/bin'
+
+test_job:
+  stage: test
+  tags:
+    - vs2017
+  script:
+    - 'cd ExampleApplication'
+    - 'exec {sourcelink print-urls bin/Release/netcoreapp2.1/ExampleApplication.dll}'
+    - 'exec {sourcelink print-json bin/Release/netcoreapp2.1/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100}'
+    - 'exec {sourcelink print-documents bin/Release/netcoreapp2.1/ExampleApplication.dll}'
+    # NB "; $? | Out-Null" is to force a success exit code because dotnet run is
+    #    expected to fail due to an expected unhandled exception being raised
+    #    by the application.
+    - 'dotnet run -v n -c Release --no-build; $? | Out-Null'
+  dependencies:
+    - build_job
