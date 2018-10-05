@@ -23,10 +23,22 @@ pipeline {
                         Write-Output (($_.Exception.ToString() -split '\r?\n') -replace '^(.*)$','ERROR EXCEPTION: $1')
                         Exit 1
                     }
-                    function exec([ScriptBlock]$externalCommand) {
-                        &$externalCommand
-                        if ($LASTEXITCODE) {
-                            throw "$externalCommand failed with exit code $LASTEXITCODE"
+                    function exec([ScriptBlock]$externalCommand, [string]$stderrPrefix='', [int[]]$successExitCodes=@(0)) {
+                        $eap = $ErrorActionPreference
+                        $ErrorActionPreference = 'Continue'
+                        try {
+                            &$externalCommand 2>&1 | ForEach-Object {
+                                if ($_ -is [System.Management.Automation.ErrorRecord]) {
+                                    "$stderrPrefix$_"
+                                } else {
+                                    "$_"
+                                }
+                            }
+                            if ($LASTEXITCODE -notin $successExitCodes) {
+                                throw "$externalCommand failed with exit code $LASTEXITCODE"
+                            }
+                        } finally {
+                            $ErrorActionPreference = $eap
                         }
                     }
 
@@ -52,10 +64,22 @@ pipeline {
                         Write-Output (($_.Exception.ToString() -split '\r?\n') -replace '^(.*)$','ERROR EXCEPTION: $1')
                         Exit 1
                     }
-                    function exec([ScriptBlock]$externalCommand) {
-                        &$externalCommand
-                        if ($LASTEXITCODE) {
-                            throw "$externalCommand failed with exit code $LASTEXITCODE"
+                    function exec([ScriptBlock]$externalCommand, [string]$stderrPrefix='', [int[]]$successExitCodes=@(0)) {
+                        $eap = $ErrorActionPreference
+                        $ErrorActionPreference = 'Continue'
+                        try {
+                            &$externalCommand 2>&1 | ForEach-Object {
+                                if ($_ -is [System.Management.Automation.ErrorRecord]) {
+                                    "$stderrPrefix$_"
+                                } else {
+                                    "$_"
+                                }
+                            }
+                            if ($LASTEXITCODE -notin $successExitCodes) {
+                                throw "$externalCommand failed with exit code $LASTEXITCODE"
+                            }
+                        } finally {
+                            $ErrorActionPreference = $eap
                         }
                     }
 
@@ -63,10 +87,10 @@ pipeline {
                     exec {sourcelink print-urls bin/Release/netcoreapp2.1/ExampleApplication.dll}
                     exec {sourcelink print-json bin/Release/netcoreapp2.1/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100}
                     exec {sourcelink print-documents bin/Release/netcoreapp2.1/ExampleApplication.dll}
-                    dotnet run -v n -c Release --no-build
+                    exec {dotnet run -v n -c Release --no-build} -successExitCodes -532462766
                     # force a success exit code because dotnet run is expected to fail due
                     # to an expected unhandled exception being raised by the application.
-                    $LASTEXITCODE = 0
+                    Exit 0
                     '''
             }
         }

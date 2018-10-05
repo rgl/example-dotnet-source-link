@@ -33,10 +33,22 @@ before_script:
   #
   # define helper functions.
   - |
-      function exec([ScriptBlock]$externalCommand) {
-        &$externalCommand
-        if ($LASTEXITCODE) {
-          throw "$externalCommand failed with exit code $LASTEXITCODE"
+      function exec([ScriptBlock]$externalCommand, [string]$stderrPrefix='', [int[]]$successExitCodes=@(0)) {
+        $eap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+          &$externalCommand 2>&1 | ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord]) {
+              "$stderrPrefix$_"
+            } else {
+              "$_"
+            }
+          }
+          if ($LASTEXITCODE -notin $successExitCodes) {
+            throw "$externalCommand failed with exit code $LASTEXITCODE"
+          }
+        } finally {
+          $ErrorActionPreference = $eap
         }
       }
 
@@ -68,6 +80,6 @@ test_job:
     # NB "; $? | Out-Null" is to force a success exit code because dotnet run is
     #    expected to fail due to an expected unhandled exception being raised
     #    by the application.
-    - 'dotnet run -v n -c Release --no-build; $? | Out-Null'
+    - 'exec {dotnet run -v n -c Release --no-build} -successExitCodes -532462766; $? | Out-Null'
   dependencies:
     - build_job
