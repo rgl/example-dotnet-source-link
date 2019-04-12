@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        label 'vs2017'
+        label 'vs2019'
     }
     stages {
         stage('Build') {
@@ -101,7 +101,10 @@ pipeline {
         }
         always {
             step $class: 'Mailer',
-                recipients: 'jenkins@example.com',
+                recipients: emailextrecipients([
+                    culprits(),
+                    requestor()
+                ]),
                 notifyEveryUnstableBuild: true,
                 sendToIndividuals: false
         }

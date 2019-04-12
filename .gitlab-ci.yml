@@ -55,7 +55,7 @@ before_script:
 build_job:
   stage: build
   tags:
-    - vs2017
+    - vs2019
   script:
     - 'cd ExampleLibrary'
     - 'exec {dotnet build -v n -c Release}'
@@ -71,7 +71,7 @@ build_job:
 test_job:
   stage: test
   tags:
-    - vs2017
+    - vs2019
   script:
     - 'cd ExampleApplication'
     - 'exec {sourcelink print-urls bin/Release/netcoreapp2.1/ExampleApplication.dll}'
