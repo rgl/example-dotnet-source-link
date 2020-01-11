@@ -36,7 +36,7 @@ cat >Directory.Build.props <<'EOF'
 <Project>
   <ItemGroup>
     <!-- NB for GitLab you need to switch the PackageReference to Microsoft.SourceLink.GitLab. -->
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 </Project>
 EOF
@@ -121,7 +121,7 @@ cat >ExampleApplication.csproj <<'EOF'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
@@ -173,9 +173,9 @@ Build the example application that uses the nuget:
 ```bash
 cd ../ExampleApplication
 dotnet build -v:n -c:Release
-sourcelink print-urls bin/Release/netcoreapp2.1/ExampleApplication.dll
-sourcelink print-json bin/Release/netcoreapp2.1/ExampleApplication.dll | cat | jq .
-sourcelink print-documents bin/Release/netcoreapp2.1/ExampleApplication.dll
+sourcelink print-urls bin/Release/netcoreapp3.1/ExampleApplication.dll
+sourcelink print-json bin/Release/netcoreapp3.1/ExampleApplication.dll | cat | jq .
+sourcelink print-documents bin/Release/netcoreapp3.1/ExampleApplication.dll
 dotnet run -v:n -c=Release --no-build
 ```
 
