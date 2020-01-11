@@ -84,7 +84,10 @@ pipeline {
                     }
 
                     cd ExampleApplication
-                    exec {sourcelink print-urls bin/Release/netcoreapp2.1/ExampleApplication.dll}
+                    # NB sourcelink print-urls is expected to return 4; it means there's at least one
+                    #    document without a URL (the automatically generated
+                    #    %AppData%/Local/Temp/.NETCoreApp,Version=v2.1.AssemblyAttributes.cs file).
+                    exec {sourcelink print-urls bin/Release/netcoreapp2.1/ExampleApplication.dll} -successExitCodes 4
                     exec {sourcelink print-json bin/Release/netcoreapp2.1/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100}
                     exec {sourcelink print-documents bin/Release/netcoreapp2.1/ExampleApplication.dll}
                     exec {dotnet run -v n -c Release --no-build} -successExitCodes -532462766
