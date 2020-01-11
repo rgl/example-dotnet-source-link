@@ -36,7 +36,7 @@ cat >Directory.Build.props <<'EOF'
 <Project>
   <ItemGroup>
     <!-- NB for GitLab you need to switch the PackageReference to Microsoft.SourceLink.GitLab. -->
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 </Project>
 EOF
