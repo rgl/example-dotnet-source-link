@@ -19,3 +19,13 @@ jobs:
       - name: Build ExampleApplication
         run: dotnet build -v n -c Release
         working-directory: ExampleApplication
+      - name: Archive ExampleLibrary package
+        uses: actions/upload-artifact@v1
+        with:
+          name: example-library-package
+          path: 'ExampleLibrary/ExampleLibrary.*.nupkg'
+      - name: Archive ExampleApplication Binaries
+        uses: actions/upload-artifact@v1
+        with:
+          name: example-application-binaries
+          path: 'ExampleApplication/bin'
