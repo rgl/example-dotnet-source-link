@@ -12,8 +12,10 @@ jobs:
         with:
           dotnet-version: '3.1.100'
       - name: Build ExampleLibrary
-        run: dotnet build --configuration Release
+        run: |
+          dotnet build -v n -c Release
+          dotnet pack -v n -c Release --no-build -p:PackageVersion=0.0.2 --output .
         working-directory: ExampleLibrary
       - name: Build ExampleApplication
-        run: dotnet build --configuration Release
+        run: dotnet build -v n -c Release
         working-directory: ExampleApplication
