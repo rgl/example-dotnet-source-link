@@ -21,11 +21,12 @@ jobs:
         working-directory: ExampleApplication
       - name: Show files
         run: find .
-      - name: Archive ExampleLibrary package
-        uses: actions/upload-artifact@v1
-        with:
-          name: example-library-package
-          path: 'ExampleLibrary/ExampleLibrary.*.nupkg'
+      # NB unfortunately "path" does not yet support wildcards.
+      #- name: Archive ExampleLibrary package
+      #  uses: actions/upload-artifact@v1
+      #  with:
+      #    name: example-library-package
+      #    path: 'ExampleLibrary/ExampleLibrary.*.nupkg'
       - name: Archive ExampleApplication Binaries
         uses: actions/upload-artifact@v1
         with:
