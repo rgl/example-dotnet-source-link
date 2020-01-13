@@ -19,6 +19,8 @@ jobs:
       - name: Build ExampleApplication
         run: dotnet build -v n -c Release
         working-directory: ExampleApplication
+      - name: Show files
+        run: find .
       - name: Archive ExampleLibrary package
         uses: actions/upload-artifact@v1
         with:
