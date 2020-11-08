@@ -1,6 +1,7 @@
 stages:
   - build
   - test
+  - publish
 
 default:
   before_script:
@@ -73,17 +74,56 @@ test_job:
   stage: test
   tags:
     - vs2019
+  dependencies:
+    - build_job
   script:
     - 'cd ExampleApplication'
     # NB sourcelink print-urls is expected to return 4; it means there's at least one
     #    document without a URL (the automatically generated
     #    %AppData%/Local/Temp/.NETCoreApp,Version=v3.1.AssemblyAttributes.cs file).
-    - 'exec {sourcelink print-urls bin/Release/netcoreapp3.1/ExampleApplication.dll} -successExitCodes 4'
+    - 'exec {sourcelink print-urls bin/Release/netcoreapp3.1/ExampleApplication.dll}'
     - 'exec {sourcelink print-json bin/Release/netcoreapp3.1/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100}'
     - 'exec {sourcelink print-documents bin/Release/netcoreapp3.1/ExampleApplication.dll}'
     # NB "; $? | Out-Null" is to force a success exit code because dotnet run is
     #    expected to fail due to an expected unhandled exception being raised
     #    by the application.
     - 'exec {dotnet run -v n -c Release --no-build} -successExitCodes -532462766; $? | Out-Null'
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - 'ExampleLibrary/ExampleLibrary.*.nupkg'
+
+# publish the package to the GitLab project repository.
+# see https://docs.gitlab.com/ee/user/packages/nuget_repository/index.html#publish-a-nuget-package-by-using-cicd
+publish_job:
+  stage: publish
+  only:
+    - gitlab
+  tags:
+    - vs2019
   dependencies:
-    - build_job
+    - test_job
+  script:
+    - |
+      [xml]$nuGetConfig = Get-Content NuGet.Config
+      $packageSource = $nuGetConfig.CreateElement('add')
+      $packageSource.SetAttribute('key', 'gitlab')
+      $packageSource.SetAttribute('value', "$env:CI_SERVER_URL/api/v4/projects/$env:CI_PROJECT_ID/packages/nuget/index.json")
+      $packageSource.SetAttribute('protocolVersion', '3')
+      $nuGetConfig.configuration.packageSources.AppendChild($packageSource) | Out-Null
+      $packageSourceCredentials = $nuGetConfig.CreateElement('packageSourceCredentials')
+      $packageSourceCredentials.InnerXml = @'
+        <gitlab>
+          <add key="Username" value="gitlab-ci-token" />
+          <add key="ClearTextPassword" value="" />
+        </gitlab>
+      '@
+      $password = $packageSourceCredentials.SelectSingleNode('gitlab/add[@key="ClearTextPassword"]')
+      $password.value = $env:CI_JOB_TOKEN
+      $nuGetConfig.configuration.AppendChild($packageSourceCredentials) | Out-Null
+      $nuGetConfig.Save("$PWD/NuGet.Config")
+    - exec {
+        dotnet nuget push `
+          (Resolve-Path ExampleLibrary/ExampleLibrary.*.nupkg) `
+          --source gitlab
+      }
