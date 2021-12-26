@@ -1,3 +1,5 @@
+[![Build status](https://github.com/rgl/example-dotnet-source-link/workflows/Build/badge.svg)](https://github.com/rgl/example-dotnet-source-link/actions?query=workflow%3ABuild)
+
 This in an example nuget library and application that uses [source link](https://github.com/dotnet/core/blob/master/Documentation/diagnostics/source_link.md) and embedded [portable pdbs](https://github.com/dotnet/core/blob/master/Documentation/diagnostics/portable_pdb.md) to be able to step into a nuget package source code.
 
 
@@ -36,7 +38,7 @@ cat >Directory.Build.props <<'EOF'
 <Project>
   <ItemGroup>
     <!-- NB for GitLab you need to switch the PackageReference to Microsoft.SourceLink.GitLab. -->
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 </Project>
 EOF
@@ -98,7 +100,7 @@ Create a console application that references the `ExampleLibrary` package:
 mkdir ExampleApplication
 cd ExampleApplication
 dotnet new console
-dotnet add package ExampleLibrary --version 0.0.2 --no-restore
+dotnet add package ExampleLibrary --version 0.0.3 --no-restore
 cat >Program.cs <<'EOF'
 using System;
 using ExampleLibrary;
@@ -121,11 +123,11 @@ cat >ExampleApplication.csproj <<'EOF'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ExampleLibrary" Version="0.0.2" />
+    <PackageReference Include="ExampleLibrary" Version="0.0.3" />
   </ItemGroup>
 </Project>
 EOF
@@ -153,7 +155,7 @@ Build the library and its nuget:
 ```bash
 cd ExampleLibrary
 dotnet build -v:n -c:Release
-dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.2 --output .
+dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.3 --output .
 ```
 
 Verify that the source links within the files inside the `.nupkg` work:
@@ -161,11 +163,11 @@ Verify that the source links within the files inside the `.nupkg` work:
 ```bash
 dotnet tool install --global sourcelink
 choco install -y jq
-sourcelink test ExampleLibrary.0.0.2.nupkg
-rm -rf ExampleLibrary.0.0.2.nupkg.tmp && 7z x -oExampleLibrary.0.0.2.nupkg.tmp ExampleLibrary.0.0.2.nupkg
-sourcelink print-urls ExampleLibrary.0.0.2.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
-sourcelink print-json ExampleLibrary.0.0.2.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
-sourcelink print-documents ExampleLibrary.0.0.2.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+sourcelink test ExampleLibrary.0.0.3.nupkg
+rm -rf ExampleLibrary.0.0.3.nupkg.tmp && 7z x -oExampleLibrary.0.0.3.nupkg.tmp ExampleLibrary.0.0.3.nupkg
+sourcelink print-urls ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+sourcelink print-json ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
+sourcelink print-documents ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
 ```
 
 Build the example application that uses the nuget:
@@ -173,9 +175,9 @@ Build the example application that uses the nuget:
 ```bash
 cd ../ExampleApplication
 dotnet build -v:n -c:Release
-sourcelink print-urls bin/Release/netcoreapp3.1/ExampleApplication.dll
-sourcelink print-json bin/Release/netcoreapp3.1/ExampleApplication.dll | cat | jq .
-sourcelink print-documents bin/Release/netcoreapp3.1/ExampleApplication.dll
+sourcelink print-urls bin/Release/net6.0/ExampleApplication.dll
+sourcelink print-json bin/Release/net6.0/ExampleApplication.dll | cat | jq .
+sourcelink print-documents bin/Release/net6.0/ExampleApplication.dll
 dotnet run -v:n -c=Release --no-build
 ```
 

@@ -6,19 +6,6 @@ stages:
 default:
   before_script:
     #
-    # enable strict mode and fail the job when there is an unhandled exception.
-    - |
-      Set-StrictMode -Version Latest
-      $FormatEnumerationLimit = -1
-      $ErrorActionPreference = 'Stop'
-      $ProgressPreference = 'SilentlyContinue'
-      trap {
-        Write-Output "ERROR: $_"
-        Write-Output (($_.ScriptStackTrace -split '\r?\n') -replace '^(.*)$','ERROR: $1')
-        Write-Output (($_.Exception.ToString() -split '\r?\n') -replace '^(.*)$','ERROR EXCEPTION: $1')
-        Exit 1
-      }
-    #
     # show the entire job script (GitLab concatenates all the before_script lines
     # and all the job script lines into a single file and executes it with
     # PowerShell).
@@ -32,38 +19,13 @@ default:
         | Format-Table -AutoSize `
         | Out-String -Width 4096 -Stream `
         | ForEach-Object {$_.Trim()}
-    #
-    # define helper functions.
-    - |
-        function exec([ScriptBlock]$externalCommand, [string]$stderrPrefix='', [int[]]$successExitCodes=@(0)) {
-          $eap = $ErrorActionPreference
-          $ErrorActionPreference = 'Continue'
-          try {
-            &$externalCommand 2>&1 | ForEach-Object {
-              if ($_ -is [System.Management.Automation.ErrorRecord]) {
-                "$stderrPrefix$_"
-              } else {
-                "$_"
-              }
-            }
-            if ($LASTEXITCODE -notin $successExitCodes) {
-              throw "$externalCommand failed with exit code $LASTEXITCODE"
-            }
-          } finally {
-            $ErrorActionPreference = $eap
-          }
-        }
 
 build_job:
   stage: build
   tags:
-    - vs2019
+    - vs2022
   script:
-    - 'cd ExampleLibrary'
-    - 'exec {dotnet build -v n -c Release}'
-    - 'exec {dotnet pack -v n -c Release --no-build -p:PackageVersion=0.0.2 --output .}'
-    - 'cd ../ExampleApplication'
-    - 'exec {dotnet build -v n -c Release}'
+    - ./build.ps1 build
   artifacts:
     expire_in: 1 week
     paths:
@@ -73,21 +35,11 @@ build_job:
 test_job:
   stage: test
   tags:
-    - vs2019
+    - vs2022
   dependencies:
     - build_job
   script:
-    - 'cd ExampleApplication'
-    # NB sourcelink print-urls is expected to return 4; it means there's at least one
-    #    document without a URL (the automatically generated
-    #    %AppData%/Local/Temp/.NETCoreApp,Version=v3.1.AssemblyAttributes.cs file).
-    - 'exec {sourcelink print-urls bin/Release/netcoreapp3.1/ExampleApplication.dll}'
-    - 'exec {sourcelink print-json bin/Release/netcoreapp3.1/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100}'
-    - 'exec {sourcelink print-documents bin/Release/netcoreapp3.1/ExampleApplication.dll}'
-    # NB "; $? | Out-Null" is to force a success exit code because dotnet run is
-    #    expected to fail due to an expected unhandled exception being raised
-    #    by the application.
-    - 'exec {dotnet run -v n -c Release --no-build} -successExitCodes -532462766; $? | Out-Null'
+    - ./build.ps1 test
   artifacts:
     expire_in: 1 week
     paths:
@@ -100,30 +52,8 @@ publish_job:
   only:
     - gitlab
   tags:
-    - vs2019
+    - vs2022
   dependencies:
     - test_job
   script:
-    - |
-      [xml]$nuGetConfig = Get-Content NuGet.Config
-      $packageSource = $nuGetConfig.CreateElement('add')
-      $packageSource.SetAttribute('key', 'gitlab')
-      $packageSource.SetAttribute('value', "$env:CI_SERVER_URL/api/v4/projects/$env:CI_PROJECT_ID/packages/nuget/index.json")
-      $packageSource.SetAttribute('protocolVersion', '3')
-      $nuGetConfig.configuration.packageSources.AppendChild($packageSource) | Out-Null
-      $packageSourceCredentials = $nuGetConfig.CreateElement('packageSourceCredentials')
-      $packageSourceCredentials.InnerXml = @'
-        <gitlab>
-          <add key="Username" value="gitlab-ci-token" />
-          <add key="ClearTextPassword" value="" />
-        </gitlab>
-      '@
-      $password = $packageSourceCredentials.SelectSingleNode('gitlab/add[@key="ClearTextPassword"]')
-      $password.value = $env:CI_JOB_TOKEN
-      $nuGetConfig.configuration.AppendChild($packageSourceCredentials) | Out-Null
-      $nuGetConfig.Save("$PWD/NuGet.Config")
-    - exec {
-        dotnet nuget push `
-          (Resolve-Path ExampleLibrary/ExampleLibrary.*.nupkg) `
-          --source gitlab
-      }
+    - ./build.ps1 publish
