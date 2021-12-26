@@ -2,7 +2,7 @@ name: Build
 on: [push]
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
         with:
@@ -10,25 +10,6 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '3.1.100'
-      - name: Build ExampleLibrary
-        run: |
-          dotnet build -v n -c Release
-          dotnet pack -v n -c Release --no-build -p:PackageVersion=0.0.2 --output .
-        working-directory: ExampleLibrary
-      - name: Build ExampleApplication
-        run: dotnet build -v n -c Release
-        working-directory: ExampleApplication
-      - name: Show files
-        run: find .
-      # NB unfortunately "path" does not yet support wildcards.
-      #- name: Archive ExampleLibrary package
-      #  uses: actions/upload-artifact@v1
-      #  with:
-      #    name: example-library-package
-      #    path: 'ExampleLibrary/ExampleLibrary.*.nupkg'
-      - name: Archive ExampleApplication Binaries
-        uses: actions/upload-artifact@v1
-        with:
-          name: example-application-binaries
-          path: 'ExampleApplication/bin'
+          dotnet-version: '6.0.101'
+      - name: Build
+        run: ./build.ps1 build
