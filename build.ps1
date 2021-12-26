@@ -63,9 +63,6 @@ function Invoke-StageBuild {
 
 function Invoke-StageTest {
     Push-Location ExampleApplication
-    # NB sourcelink print-urls is expected to return 4; it means there's at least one
-    #    document without a URL (the automatically generated
-    #    %AppData%/Local/Temp/.NETCoreApp,Version=v3.1.AssemblyAttributes.cs file).
     exec {
         sourcelink print-urls bin/Release/net6.0/ExampleApplication.dll
     }
@@ -78,7 +75,9 @@ function Invoke-StageTest {
     # NB "; $? | Out-Null" is to force a success exit code because dotnet run is
     #    expected to fail due to an expected unhandled exception being raised
     #    by the application.
-    exec -successExitCodes -532462766 {
+    # NB -532462766 (on Windows) or 134 (on Ubuntu) are the expected successful
+    #    exit codes.
+    exec -successExitCodes -532462766,134 {
         dotnet run -v n -c Release --no-build
     }
     $? | Out-Null

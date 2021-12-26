@@ -1,3 +1,5 @@
+[![Build status](https://github.com/rgl/example-dotnet-source-link/workflows/Build/badge.svg)](https://github.com/rgl/example-dotnet-source-link/actions?query=workflow%3ABuild)
+
 This in an example nuget library and application that uses [source link](https://github.com/dotnet/core/blob/master/Documentation/diagnostics/source_link.md) and embedded [portable pdbs](https://github.com/dotnet/core/blob/master/Documentation/diagnostics/portable_pdb.md) to be able to step into a nuget package source code.
 
 
