@@ -44,7 +44,7 @@ pipeline {
 
                     cd ExampleLibrary
                     exec {dotnet build -v n -c Release}
-                    exec {dotnet pack -v n -c Release --no-build -p:PackageVersion=0.0.2 --output .}
+                    exec {dotnet pack -v n -c Release --no-build -p:PackageVersion=0.0.3 --output .}
 
                     cd ../ExampleApplication
                     exec {dotnet build -v n -c Release}
@@ -87,9 +87,9 @@ pipeline {
                     # NB sourcelink print-urls is expected to return 4; it means there's at least one
                     #    document without a URL (the automatically generated
                     #    %AppData%/Local/Temp/.NETCoreApp,Version=v3.1.AssemblyAttributes.cs file).
-                    exec {sourcelink print-urls bin/Release/netcoreapp3.1/ExampleApplication.dll}
-                    exec {sourcelink print-json bin/Release/netcoreapp3.1/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100}
-                    exec {sourcelink print-documents bin/Release/netcoreapp3.1/ExampleApplication.dll}
+                    exec {sourcelink print-urls bin/Release/net6.0/ExampleApplication.dll}
+                    exec {sourcelink print-json bin/Release/net6.0/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100}
+                    exec {sourcelink print-documents bin/Release/net6.0/ExampleApplication.dll}
                     exec {dotnet run -v n -c Release --no-build} -successExitCodes -532462766
                     # force a success exit code because dotnet run is expected to fail due
                     # to an expected unhandled exception being raised by the application.
