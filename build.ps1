@@ -36,6 +36,12 @@ function exec([ScriptBlock]$externalCommand, [string]$stderrPrefix = '', [int[]]
         if ($LASTEXITCODE -notin $successExitCodes) {
             throw "$externalCommand failed with exit code $LASTEXITCODE"
         }
+        if ($LASTEXITCODE -ne 0) {
+            # force $LASTEXITCODE to 0 and $? to $true. these are normally checked
+            # by the CI system to known whether the command was successful or not.
+            $global:LASTEXITCODE = 0
+            $? | Out-Null
+        }
     }
     finally {
         $ErrorActionPreference = $eap
@@ -72,15 +78,11 @@ function Invoke-StageTest {
     exec {
         sourcelink print-documents bin/Release/net6.0/ExampleApplication.dll
     }
-    # NB "; $? | Out-Null" is to force a success exit code because dotnet run is
-    #    expected to fail due to an expected unhandled exception being raised
-    #    by the application.
     # NB -532462766 (on Windows) or 134 (on Ubuntu) are the expected successful
     #    exit codes.
     exec -successExitCodes -532462766,134 {
         dotnet run -v n -c Release --no-build
     }
-    $? | Out-Null
     Pop-Location
 }
 
