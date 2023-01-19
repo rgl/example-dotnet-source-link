@@ -6,13 +6,6 @@ stages:
 default:
   before_script:
     #
-    # show the entire job script (GitLab concatenates all the before_script lines
-    # and all the job script lines into a single file and executes it with
-    # PowerShell).
-    - |
-      Write-Output "$PSCommandPath content:"
-      Get-Content $PSCommandPath
-    #
     # show all the environment variables.
     - |
       Get-ChildItem env: `
