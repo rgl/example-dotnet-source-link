@@ -13,9 +13,9 @@ $FormatEnumerationLimit = -1
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 trap {
-    Write-Output "ERROR: $_"
-    Write-Output (($_.ScriptStackTrace -split '\r?\n') -replace '^(.*)$', 'ERROR: $1')
-    Write-Output (($_.Exception.ToString() -split '\r?\n') -replace '^(.*)$', 'ERROR EXCEPTION: $1')
+    "ERROR: $_" | Write-Host
+    ($_.ScriptStackTrace -split '\r?\n') -replace '^(.*)$', 'ERROR: $1' | Write-Host
+    ($_.Exception.ToString() -split '\r?\n') -replace '^(.*)$', 'ERROR EXCEPTION: $1' | Write-Host
     Exit 1
 }
 
@@ -49,6 +49,10 @@ function exec([ScriptBlock]$externalCommand, [string]$stderrPrefix = '', [int[]]
 }
 
 function Invoke-StageBuild {
+    # restore the tools.
+    exec {
+        dotnet tool restore
+    }
     # build the library.
     Push-Location ExampleLibrary
     exec {
@@ -70,13 +74,13 @@ function Invoke-StageBuild {
 function Invoke-StageTest {
     Push-Location ExampleApplication
     exec {
-        sourcelink print-urls bin/Release/net6.0/ExampleApplication.dll
+        dotnet tool run sourcelink print-urls bin/Release/net8.0/ExampleApplication.dll
     }
     exec {
-        sourcelink print-json bin/Release/net6.0/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100
+        dotnet tool run sourcelink print-json bin/Release/net8.0/ExampleApplication.dll | ConvertFrom-Json | ConvertTo-Json -Depth 100
     }
     exec {
-        sourcelink print-documents bin/Release/net6.0/ExampleApplication.dll
+        dotnet tool run sourcelink print-documents bin/Release/net8.0/ExampleApplication.dll
     }
     # NB -532462766 (on Windows) or 134 (on Ubuntu) are the expected successful
     #    exit codes.
