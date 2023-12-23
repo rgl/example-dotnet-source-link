@@ -31,12 +31,12 @@ This in an example nuget library and application that uses [source link](https:/
 
 # Example
 
-Configure msbuild to always use SourceLink:
+Configure MSBuild to include SourceLink support in the build:
 
 ```bash
 cat >Directory.Build.props <<'EOF'
 <Project>
-  <ItemGroup>
+  <ItemGroup Condition="'$(GITLAB_CI)' == 'true'">
     <PackageReference Include="Microsoft.SourceLink.GitLab" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
 </Project>
