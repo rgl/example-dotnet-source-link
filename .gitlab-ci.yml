@@ -42,8 +42,6 @@ test:
 # see https://docs.gitlab.com/ee/user/packages/nuget_repository/index.html#publish-a-nuget-package-by-using-cicd
 publish:
   stage: publish
-  only:
-    - gitlab
   tags:
     - vs2022
   dependencies:
