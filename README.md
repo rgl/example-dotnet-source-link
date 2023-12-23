@@ -1,6 +1,6 @@
 [![Build status](https://github.com/rgl/example-dotnet-source-link/workflows/Build/badge.svg)](https://github.com/rgl/example-dotnet-source-link/actions?query=workflow%3ABuild)
 
-This in an example nuget library and application that uses [source link](https://github.com/dotnet/core/blob/master/Documentation/diagnostics/source_link.md) and embedded [portable pdbs](https://github.com/dotnet/core/blob/master/Documentation/diagnostics/portable_pdb.md) to be able to step into a nuget package source code.
+This in an example nuget library and application that uses [source link](https://github.com/dotnet/designs/blob/main/accepted/2020/diagnostics/source-link.md) and embedded [portable pdbs](https://github.com/dotnet/core/blob/master/Documentation/diagnostics/portable_pdb.md) to be able to step into a nuget package source code.
 
 
 # Notes
@@ -23,8 +23,8 @@ This in an example nuget library and application that uses [source link](https:/
 
 # Reference
 
-* [Customize your build](https://docs.microsoft.com/en-us/visualstudio/msbuild/customize-your-build)
-* [dotnet pack](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-pack?tabs=netcore2x)
+* [Customize your build](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-your-build)
+* [dotnet pack](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-pack)
 * [dotnet sourcelink](https://github.com/dotnet/sourcelink)
 * [ctaggart/SourceLink](https://github.com/ctaggart/SourceLink)
 
@@ -37,8 +37,7 @@ Configure msbuild to always use SourceLink:
 cat >Directory.Build.props <<'EOF'
 <Project>
   <ItemGroup>
-    <!-- NB for GitLab you need to switch the PackageReference to Microsoft.SourceLink.GitLab. -->
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitLab" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
 </Project>
 EOF
@@ -86,7 +85,7 @@ EOF
 cat >ExampleLibrary.csproj <<'EOF'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 </Project>
@@ -112,6 +111,8 @@ namespace ExampleApplication
         static void Main(string[] args)
         {
             Console.WriteLine(Greeter.Greet("World"));
+            Console.WriteLine("NB check whether the PDB was used in the following exception stack trace.");
+            Console.WriteLine("NB each stack trace line must have a file name and line number.");
             Console.WriteLine(Greeter.Greet(null)); // with null it will throw an exception to check whether the stack traces are ok.
         }
     }
@@ -123,7 +124,7 @@ cat >ExampleApplication.csproj <<'EOF'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
@@ -161,13 +162,14 @@ dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.3 --output .
 Verify that the source links within the files inside the `.nupkg` work:
 
 ```bash
-dotnet tool install --global sourcelink
 choco install -y jq
-sourcelink test ExampleLibrary.0.0.3.nupkg
+dotnet new tool-manifest
+dotnet tool install sourcelink
+dotnet tool run sourcelink test ExampleLibrary.0.0.3.nupkg
 rm -rf ExampleLibrary.0.0.3.nupkg.tmp && 7z x -oExampleLibrary.0.0.3.nupkg.tmp ExampleLibrary.0.0.3.nupkg
-sourcelink print-urls ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
-sourcelink print-json ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
-sourcelink print-documents ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+dotnet tool run sourcelink print-urls ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+dotnet tool run sourcelink print-json ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
+dotnet tool run sourcelink print-documents ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
 ```
 
 Build the example application that uses the nuget:
@@ -175,17 +177,19 @@ Build the example application that uses the nuget:
 ```bash
 cd ../ExampleApplication
 dotnet build -v:n -c:Release
-sourcelink print-urls bin/Release/net6.0/ExampleApplication.dll
-sourcelink print-json bin/Release/net6.0/ExampleApplication.dll | cat | jq .
-sourcelink print-documents bin/Release/net6.0/ExampleApplication.dll
+dotnet tool run sourcelink print-urls bin/Release/net8.0/ExampleApplication.dll
+dotnet tool run sourcelink print-json bin/Release/net8.0/ExampleApplication.dll | cat | jq .
+dotnet tool run sourcelink print-documents bin/Release/net8.0/ExampleApplication.dll
 dotnet run -v:n -c=Release --no-build
 ```
 
 You should see file name and line numbers in all the stack trace lines. e.g.:
 
 ```
+NB check whether the PDB was used in the following exception stack trace.
+NB each stack trace line must have a file name and line number.
 Unhandled Exception: System.ArgumentNullException: Value cannot be null.
 Parameter name: name
    at ExampleLibrary.Greeter.Greet(String name) in C:\vagrant\Projects\example-dotnet-source-link\ExampleLibrary\Greeter.cs:line 14
-   at ExampleApplication.Program.Main(String[] args) in C:\vagrant\Projects\example-dotnet-source-link\ExampleApplication\Program.cs:line 10
+   at ExampleApplication.Program.Main(String[] args) in C:\vagrant\Projects\example-dotnet-source-link\ExampleApplication\Program.cs:line 13
 ```

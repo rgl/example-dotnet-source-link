@@ -13,7 +13,7 @@ default:
         | Out-String -Width 4096 -Stream `
         | ForEach-Object {$_.Trim()}
 
-build_job:
+build:
   stage: build
   tags:
     - vs2022
@@ -25,12 +25,12 @@ build_job:
       - 'ExampleLibrary/ExampleLibrary.*.nupkg'
       - 'ExampleApplication/bin'
 
-test_job:
+test:
   stage: test
   tags:
     - vs2022
   dependencies:
-    - build_job
+    - build
   script:
     - ./build.ps1 test
   artifacts:
@@ -40,13 +40,13 @@ test_job:
 
 # publish the package to the GitLab project repository.
 # see https://docs.gitlab.com/ee/user/packages/nuget_repository/index.html#publish-a-nuget-package-by-using-cicd
-publish_job:
+publish:
   stage: publish
   only:
     - gitlab
   tags:
     - vs2022
   dependencies:
-    - test_job
+    - test
   script:
     - ./build.ps1 publish
