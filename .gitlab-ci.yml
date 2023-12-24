@@ -22,8 +22,8 @@ build:
   artifacts:
     expire_in: 1 week
     paths:
-      - 'ExampleLibrary/ExampleLibrary.*.nupkg'
-      - 'ExampleApplication/bin'
+      - packages
+      - ExampleApplication/bin
 
 test:
   stage: test
@@ -36,7 +36,7 @@ test:
   artifacts:
     expire_in: 1 week
     paths:
-      - 'ExampleLibrary/ExampleLibrary.*.nupkg'
+      - packages
 
 # publish the package to the GitLab project repository.
 # see https://docs.gitlab.com/ee/user/packages/nuget_repository/index.html#publish-a-nuget-package-by-using-cicd

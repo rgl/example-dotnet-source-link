@@ -26,16 +26,28 @@ This in an example nuget library and application that uses [source link](https:/
 * [Customize your build](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-your-build)
 * [dotnet pack](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-pack)
 * [dotnet sourcelink](https://github.com/dotnet/sourcelink)
+  * [ContinuousIntegrationBuild](https://github.com/dotnet/sourcelink/blob/8.0.0/docs/README.md#continuousintegrationbuild)
+  * [EmbedUntrackedSources](https://github.com/dotnet/sourcelink/blob/8.0.0/docs/README.md#embeduntrackedsources)
 * [ctaggart/SourceLink](https://github.com/ctaggart/SourceLink)
+* [clairernovotny/DeterministicBuilds](https://github.com/clairernovotny/DeterministicBuilds)
+* [C# Compiler Options that control code generation](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/code-generation)
+  * [Deterministic](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/code-generation#deterministic)
 
 
 # Example
 
-Configure MSBuild to include SourceLink support in the build:
+Configure the build:
 
 ```bash
 cat >Directory.Build.props <<'EOF'
 <Project>
+  <PropertyGroup>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CI)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
   <ItemGroup Condition="'$(GITLAB_CI)' == 'true'">
     <PackageReference Include="Microsoft.SourceLink.GitLab" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
@@ -49,7 +61,7 @@ Configure nuget to use our local directory as a package source:
 cat >NuGet.Config <<'EOF'
 <configuration>
   <packageSources>
-    <add key="ExampleLibrary" value="ExampleLibrary" />
+    <add key="ExampleLibrary" value="packages" />
   </packageSources>
 </configuration>
 EOF
@@ -111,8 +123,15 @@ namespace ExampleApplication
         static void Main(string[] args)
         {
             Console.WriteLine(Greeter.Greet("World"));
+            Console.WriteLine("NB");
             Console.WriteLine("NB check whether the PDB was used in the following exception stack trace.");
-            Console.WriteLine("NB each stack trace line must have a file name and line number.");
+            Console.WriteLine("NB each stack trace line must have a deterministic file name and line number.");
+            Console.WriteLine("NB the path is only deterministic when building in CI (where the CI environment variable exists).");
+            Console.WriteLine("NB the stack trace should look something like:");
+            Console.WriteLine("NB   Unhandled exception. System.ArgumentNullException: Value cannot be null. (Parameter 'name')");
+            Console.WriteLine("NB      at ExampleLibrary.Greeter.Greet(String name) in /_/ExampleLibrary/Greeter.cs:line 14");
+            Console.WriteLine("NB      at ExampleApplication.Program.Main(String[] args) in /_/ExampleApplication/Program.cs:line 20");
+            Console.WriteLine("NB");
             Console.WriteLine(Greeter.Greet(null)); // with null it will throw an exception to check whether the stack traces are ok.
         }
     }
@@ -154,22 +173,24 @@ git push -u origin master
 Build the library and its nuget:
 
 ```bash
+mkdir -p packages
 cd ExampleLibrary
 dotnet build -v:n -c:Release
-dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.3 --output .
+dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.3 --output ../packages
 ```
 
 Verify that the source links within the files inside the `.nupkg` work:
 
 ```bash
+cd ../packages
 choco install -y jq
 dotnet new tool-manifest
 dotnet tool install sourcelink
 dotnet tool run sourcelink test ExampleLibrary.0.0.3.nupkg
 rm -rf ExampleLibrary.0.0.3.nupkg.tmp && 7z x -oExampleLibrary.0.0.3.nupkg.tmp ExampleLibrary.0.0.3.nupkg
-dotnet tool run sourcelink print-urls ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
-dotnet tool run sourcelink print-json ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll | cat | jq .
-dotnet tool run sourcelink print-documents ExampleLibrary.0.0.3.nupkg.tmp/lib/netstandard2.0/ExampleLibrary.dll
+dotnet tool run sourcelink print-urls ExampleLibrary.0.0.3.nupkg.tmp/lib/net8.0/ExampleLibrary.dll
+dotnet tool run sourcelink print-json ExampleLibrary.0.0.3.nupkg.tmp/lib/net8.0/ExampleLibrary.dll | cat | jq .
+dotnet tool run sourcelink print-documents ExampleLibrary.0.0.3.nupkg.tmp/lib/net8.0/ExampleLibrary.dll
 ```
 
 Build the example application that uses the nuget:
@@ -186,10 +207,16 @@ dotnet run -v:n -c=Release --no-build
 You should see file name and line numbers in all the stack trace lines. e.g.:
 
 ```
+NB
 NB check whether the PDB was used in the following exception stack trace.
-NB each stack trace line must have a file name and line number.
-Unhandled Exception: System.ArgumentNullException: Value cannot be null.
-Parameter name: name
+NB each stack trace line must have a deterministic file name and line number.
+NB the path is only deterministic when building in CI (where the CI environment variable exists).
+NB the stack trace should look something like:
+NB   Unhandled exception. System.ArgumentNullException: Value cannot be null. (Parameter 'name')
+NB      at ExampleLibrary.Greeter.Greet(String name) in /_/ExampleLibrary/Greeter.cs:line 14
+NB      at ExampleApplication.Program.Main(String[] args) in /_/ExampleApplication/Program.cs:line 20
+NB
+Unhandled exception. System.ArgumentNullException: Value cannot be null. (Parameter 'name')
    at ExampleLibrary.Greeter.Greet(String name) in C:\vagrant\Projects\example-dotnet-source-link\ExampleLibrary\Greeter.cs:line 14
-   at ExampleApplication.Program.Main(String[] args) in C:\vagrant\Projects\example-dotnet-source-link\ExampleApplication\Program.cs:line 13
+   at ExampleApplication.Program.Main(String[] args) in C:\vagrant\Projects\example-dotnet-source-link\ExampleApplication\Program.cs:line 20
 ```
