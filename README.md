@@ -28,6 +28,7 @@ This in an example nuget library and application that uses [source link](https:/
 * [dotnet sourcelink](https://github.com/dotnet/sourcelink)
   * [ContinuousIntegrationBuild](https://github.com/dotnet/sourcelink/blob/8.0.0/docs/README.md#continuousintegrationbuild)
   * [EmbedUntrackedSources](https://github.com/dotnet/sourcelink/blob/8.0.0/docs/README.md#embeduntrackedsources)
+  * [PublishRepositoryUrl](https://github.com/dotnet/sourcelink/blob/8.0.0/docs/README.md#publishrepositoryurl)
 * [ctaggart/SourceLink](https://github.com/ctaggart/SourceLink)
 * [clairernovotny/DeterministicBuilds](https://github.com/clairernovotny/DeterministicBuilds)
 * [C# Compiler Options that control code generation](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/code-generation)
@@ -43,6 +44,7 @@ cat >Directory.Build.props <<'EOF'
 <Project>
   <PropertyGroup>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(CI)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
