@@ -177,8 +177,8 @@ Build the library and its nuget:
 ```bash
 mkdir -p packages
 cd ExampleLibrary
-dotnet build -v:n -c:Release
-dotnet pack -v:n -c=Release --no-build -p:PackageVersion=0.0.3 --output ../packages
+dotnet build -v:n -c:Release -p:Version=0.0.3
+dotnet pack -v:n -c=Release --no-build -p:Version=0.0.3 --output ../packages
 ```
 
 Verify that the source links within the files inside the `.nupkg` work:
@@ -199,7 +199,7 @@ Build the example application that uses the nuget:
 
 ```bash
 cd ../ExampleApplication
-dotnet build -v:n -c:Release
+dotnet build -v:n -c:Release -p:Version=0.0.1
 dotnet tool run sourcelink print-urls bin/Release/net8.0/ExampleApplication.dll
 dotnet tool run sourcelink print-json bin/Release/net8.0/ExampleApplication.dll | cat | jq .
 dotnet tool run sourcelink print-documents bin/Release/net8.0/ExampleApplication.dll

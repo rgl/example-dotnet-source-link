@@ -5,6 +5,20 @@ param(
     [string]$stage
 )
 
+# library and application versions to set.
+# NB these versions have the semver syntax. e.g.:
+#       1.2.3
+#       1.2.3.4-rc0
+#       1.2.3.4-rc.0
+# NB they will set two PE properties, e.g.:
+#       FileVersion:    1.2.3.0
+#       ProductVersion: 1.2.3+9706f44682c796d3172d810cc5077cc8f2f19674
+#    the "+<revision>" is automatically set to the last commit revision.
+# NB they will set the nuspec nuget package version, e.g.:
+#       <version>1.2.3</version>
+$libVersion = '0.0.3'
+$appVersion = '0.0.1'
+
 #
 # enable strict mode and fail the job when there is an unhandled exception.
 
@@ -101,20 +115,36 @@ function Invoke-StageBuild {
     Push-Location ExampleLibrary
     exec {
         Write-Host 'dotnet build ExampleLibrary...'
-        dotnet build -v n -c Release
+        dotnet build -v n -c Release "-p:Version=$libVersion"
     }
     exec {
         Write-Host 'dotnet pack ExampleLibrary...'
         New-Item -ItemType Directory -Force ../packages | Out-Null
-        dotnet pack -v n -c Release --no-build -p:PackageVersion=0.0.3 --output ../packages
+        dotnet pack -v n -c Release --no-build "-p:Version=$libVersion" --output ../packages
     }
     Pop-Location
+
+    # set the application library dependency version.
+    # NB in a real application this would not be needed, as you were going to
+    #    have the library in a nother repository, and would manually update
+    #    the application library dependency version, but here, as an
+    #    example, we are doing it automatically.
+    $project = Get-Content -Raw ExampleApplication\ExampleApplication.csproj
+    $updatedProject = $project `
+        -replace '(\<PackageReference Include="ExampleLibrary" Version=").+?(" /\>)',"`${1}$libVersion`${2}"
+    if ($updatedProject -ne $project) {
+        Write-Host "Setting the application library dependency version..."
+        Set-Content `
+            -NoNewline `
+            -Path ExampleApplication\ExampleApplication.csproj `
+            -Value $updatedProject
+    }
 
     # build the application.
     Push-Location ExampleApplication
     exec {
         Write-Host 'dotnet build ExampleApplication...'
-        dotnet build -v n -c Release
+        dotnet build -v n -c Release "-p:Version=$appVersion"
     }
     Pop-Location
 }
@@ -135,6 +165,12 @@ function Invoke-StageTest {
             dotnet tool run sourcelink print-documents "bin/Release/net8.0/$_"
         }
     }
+    # dump the file version.
+    @('ExampleLibrary.dll', 'ExampleApplication.dll') | ForEach-Object {
+        Write-Host "Getting the $_ version..."
+        Write-Host (Get-Item bin/Release/net8.0/$_).VersionInfo
+    }
+    # execute the application.
     # NB -532462766 (on Windows) or 134 (on Ubuntu) are the expected successful
     #    exit codes.
     exec -successExitCodes -532462766,134 {
