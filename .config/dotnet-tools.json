@@ -7,6 +7,12 @@
       "commands": [
         "sourcelink"
       ]
+    },
+    "microsoft.sbom.dotnettool": {
+      "version": "2.2.1",
+      "commands": [
+        "sbom-tool"
+      ]
     }
   }
 }

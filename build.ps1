@@ -118,6 +118,22 @@ function Invoke-StageBuild {
         dotnet build -v n -c Release "-p:Version=$libVersion"
     }
     exec {
+        Write-Host 'sbom-tool ExampleLibrary...'
+        if (Test-Path bin/Release/net8.0/_manifest) {
+            Remove-Item -Recurse -Force bin/Release/net8.0/_manifest
+        }
+        New-Item -ItemType Directory bin/Release/net8.0/_manifest | Out-Null
+        dotnet tool run sbom-tool generate `
+            -BuildDropPath bin/Release/net8.0 `
+            -ManifestDirPath bin/Release/net8.0/_manifest `
+            -BuildComponentPath . `
+            -PackageSupplier ExampleCompany `
+            -NamespaceUriBase https://sbom.example.com `
+            -PackageName ExampleLibrary `
+            -PackageVersion $libVersion `
+            -Verbosity Information
+    }
+    exec {
         Write-Host 'dotnet pack ExampleLibrary...'
         New-Item -ItemType Directory -Force ../packages | Out-Null
         dotnet pack -v n -c Release --no-build "-p:Version=$libVersion" --output ../packages
@@ -146,11 +162,38 @@ function Invoke-StageBuild {
         Write-Host 'dotnet build ExampleApplication...'
         dotnet build -v n -c Release "-p:Version=$appVersion"
     }
+    exec {
+        Write-Host 'sbom-tool generate ExampleApplication...'
+        if (Test-Path bin/Release/net8.0/_manifest) {
+            Remove-Item -Recurse -Force bin/Release/net8.0/_manifest
+        }
+        New-Item -ItemType Directory bin/Release/net8.0/_manifest | Out-Null
+        dotnet tool run sbom-tool generate `
+            -BuildDropPath bin/Release/net8.0 `
+            -ManifestDirPath bin/Release/net8.0 `
+            -BuildComponentPath . `
+            -PackageSupplier ExampleCompany `
+            -NamespaceUriBase https://sbom.example.com `
+            -PackageName ExampleApplication `
+            -PackageVersion $appVersion `
+            -Verbosity Information
+    }
     Pop-Location
 }
 
 function Invoke-StageTest {
     Push-Location ExampleApplication
+    # validate the sbom.
+    exec {
+        Write-Host 'sbom-tool validate ExampleApplication...'
+        dotnet tool run sbom-tool validate `
+            -BuildDropPath bin/Release/net8.0 `
+            -ManifestDirPath bin/Release/net8.0/_manifest `
+            -ManifestInfo spdx:2.2 `
+            -OutputPath bin/sbom-tool-validate-result.json `
+            -Verbosity Information
+    }
+    # dump source link information.
     @('ExampleLibrary.dll', 'ExampleApplication.dll') | ForEach-Object {
         exec {
             Write-Host "sourcelink print-urls $_..."
