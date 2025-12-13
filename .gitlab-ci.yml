@@ -16,7 +16,7 @@ default:
 build:
   stage: build
   tags:
-    - vs2022
+    - vs2026
   script:
     - ./build.ps1 build
   artifacts:
@@ -28,7 +28,7 @@ build:
 test:
   stage: test
   tags:
-    - vs2022
+    - vs2026
   dependencies:
     - build
   script:
@@ -43,7 +43,7 @@ test:
 publish:
   stage: publish
   tags:
-    - vs2022
+    - vs2026
   dependencies:
     - test
   script:

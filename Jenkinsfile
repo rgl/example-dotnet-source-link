@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        label 'vs2022'
+        label 'vs2026'
     }
     stages {
         stage('Build') {
